@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MarketLens | AI Stock Direction Predictor</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 26 26'%3E%3Cpath d='M7 3v19' stroke='%23ef4444' stroke-width='2'/%3E%3Crect x='4.5' y='7' width='5' height='10' fill='%23ef4444'/%3E%3Cpath d='M13 5v19' stroke='%2322c55e' stroke-width='2'/%3E%3Crect x='10.5' y='9' width='5' height='10' fill='%2322c55e'/%3E%3Cpath d='M19 2v18' stroke='%233b82f6' stroke-width='2'/%3E%3Crect x='16.5' y='6' width='5' height='8' fill='%233b82f6'/%3E%3C/svg%3E">
+<style>
+:root{--bg:#07090c;--card:#0f1318;--line:#1c232c;--text:#e6edf3;--mute:#8793a1;--green:#22c55e;--red:#ef4444;--blue:#3b82f6}
+*{box-sizing:border-box;margin:0}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,sans-serif;line-height:1.5}
+header{border-bottom:1px solid var(--line);padding:16px 24px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.logo{font-weight:800;font-size:1.25rem;letter-spacing:.3px}
+.logo span:nth-child(1){color:var(--red)}.logo span:nth-child(2){color:var(--green)}.logo span:nth-child(3){color:var(--blue)}
+.tag{color:var(--mute);font-size:.85rem}
+main{max-width:1100px;margin:0 auto;padding:24px 16px 48px}
+.search{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.search input{flex:1;min-width:200px;background:var(--card);border:1px solid var(--line);color:var(--text);padding:12px 14px;border-radius:8px;font-size:1rem}
+.search input:focus{outline:2px solid var(--blue);border-color:transparent}
+button{background:var(--blue);color:#fff;border:0;padding:12px 22px;border-radius:8px;font-size:1rem;font-weight:600;cursor:pointer}
+button:hover{filter:brightness(1.12)}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px}
+.chip{background:transparent;border:1px solid var(--line);color:var(--mute);padding:6px 12px;border-radius:999px;font-size:.85rem;font-weight:500}
+.chip:hover{border-color:var(--blue);color:var(--text)}
+.grid{display:grid;gap:16px}
+.g3{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.g2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px}
+.card h3{font-size:.8rem;text-transform:uppercase;letter-spacing:1px;color:var(--mute);margin-bottom:12px;font-weight:600}
+.big{font-size:2.4rem;font-weight:800;line-height:1.1}
+.up{color:var(--green)}.down{color:var(--red)}.blue{color:var(--blue)}
+.sub{color:var(--mute);font-size:.85rem;margin-top:6px}
+.sig{border-width:2px}.sig.up{border-color:var(--green)}.sig.down{border-color:var(--red)}
+.gauge{height:10px;border-radius:6px;background:var(--red);margin-top:14px;position:relative;overflow:hidden}
+.gauge i{position:absolute;left:0;top:0;bottom:0;background:var(--green)}
+.gl{display:flex;justify-content:space-between;font-size:.75rem;color:var(--mute);margin-top:4px}
+table{width:100%;border-collapse:collapse;font-size:.92rem}
+th,td{text-align:left;padding:9px 6px;border-bottom:1px solid var(--line)}
+th{color:var(--mute);font-weight:600;font-size:.78rem;text-transform:uppercase}
+tr.best td:first-child{color:var(--blue);font-weight:700}
+canvas{width:100%;height:260px;display:block}
+.legend{display:flex;gap:16px;font-size:.82rem;color:var(--mute);margin-top:8px}
+.legend b{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px}
+.bar{display:flex;align-items:center;gap:10px;margin:7px 0;font-size:.85rem}
+.bar span:first-child{width:110px;color:var(--mute)}
+.bar .t{flex:1;height:8px;background:var(--line);border-radius:4px;overflow:hidden}
+.bar .t i{display:block;height:100%;background:var(--blue)}
+.warn{background:#1a1204;border:1px solid #5a4410;color:#e9c46a;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:.88rem}
+.err{background:#1a0808;border:1px solid var(--red);color:#ff9a9a;padding:12px 16px;border-radius:8px}
+.hide{display:none}
+.mt{margin-top:16px}
+.loader{text-align:center;padding:60px;color:var(--mute)}
+.spin{width:34px;height:34px;border:3px solid var(--line);border-top-color:var(--blue);border-radius:50%;margin:0 auto 14px;animation:s 1s linear infinite}
+@keyframes s{to{transform:rotate(360deg)}}
+.live{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:.82rem;font-weight:600;padding:6px 12px;border:1px solid var(--line);border-radius:999px;color:var(--mute)}
+.live i{width:9px;height:9px;border-radius:50%;background:var(--mute)}
+.live.on{color:var(--green)}.live.on i{background:var(--green);animation:pulse 1.4s infinite}
+.live.sim{color:var(--blue)}.live.sim i{background:var(--blue);animation:pulse 1.4s infinite}
+.live.off{color:#e9c46a}.live.off i{background:#e9c46a}
+.live.err{color:var(--red)}.live.err i{background:var(--red)}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(120,200,160,.6)}100%{box-shadow:0 0 0 10px rgba(120,200,160,0)}}
+.big{transition:color .6s}
+.fu{color:var(--green)!important}.fd{color:var(--red)!important}
+.ctop{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.ohlc{font-size:.85rem;font-variant-numeric:tabular-nums;color:var(--mute)}
+.tools{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:4px 0 10px}
+.grp{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding-right:12px;border-right:1px solid var(--line)}
+.grp:last-child{border:0}
+.tb{width:auto;margin:0;display:flex;flex-direction:column;align-items:center;gap:3px;background:transparent;border:1px solid var(--line);color:var(--mute);padding:6px 9px;border-radius:8px;font-size:.68rem;font-weight:600}
+.tb svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.tb:hover{border-color:var(--blue);color:var(--text)}
+.tb.on{background:rgba(59,130,246,.16);border-color:var(--blue);color:var(--text)}
+.tf{flex-direction:row;padding:8px 12px;font-size:.85rem}
+.grp label{font-size:.8rem;color:var(--mute)}.grp label b{color:var(--text)}
+#rf{width:110px;padding:0;margin:0;accent-color:var(--blue)}
+.mini{width:auto;margin:0;padding:7px 12px;font-size:.8rem;background:transparent;border:1px solid var(--line);color:var(--text)}
+.meter{height:3px;background:var(--line);border-radius:2px;overflow:hidden;margin-bottom:10px}
+.meter i{display:block;height:100%;width:0;background:var(--blue)}
+#cv{height:380px;cursor:crosshair}
+footer{text-align:center;color:var(--mute);font-size:.8rem;padding:24px 16px;border-top:1px solid var(--line)}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo"><svg width="28" height="28" viewBox="0 0 26 26" style="margin-right:8px;vertical-align:-6px"><g stroke-width="2" stroke-linecap="round"><path d="M7 3v19" stroke="#ef4444"/><path d="M13 5v19" stroke="#22c55e"/><path d="M19 2v18" stroke="#3b82f6"/></g><rect x="4.5" y="7" width="5" height="10" rx="1" fill="#ef4444"/><rect x="10.5" y="9" width="5" height="10" rx="1" fill="#22c55e"/><rect x="16.5" y="6" width="5" height="8" rx="1" fill="#3b82f6"/></svg><span>Market</span><span>Lens</span> <span>AI</span></div>
+  <div class="tag">Next-day direction predictor for NSE stocks and indices</div>
+  <div id="live" class="live"><i></i><span id="livetxt">Connecting...</span></div>
+</header>
+<main>
+  <form class="search" onsubmit="run(document.getElementById('t').value);return false">
+    <input id="t" value="^NSEI" placeholder="Ticker, e.g. RELIANCE.NS" autocomplete="off">
+    <button type="submit">Analyze</button>
+  </form>
+  <div class="chips">
+    <button class="chip" onclick="run('^NSEI')">NIFTY 50</button>
+    <button class="chip" onclick="run('^BSESN')">SENSEX</button>
+    <button class="chip" onclick="run('RELIANCE.NS')">RELIANCE</button>
+    <button class="chip" onclick="run('TCS.NS')">TCS</button>
+    <button class="chip" onclick="run('INFY.NS')">INFOSYS</button>
+    <button class="chip" onclick="run('HDFCBANK.NS')">HDFC BANK</button>
+  </div>
+
+  <div id="loader" class="loader hide"><div class="spin"></div>Training models on historical data...</div>
+  <div id="error" class="err hide"></div>
+
+  <div id="out" class="hide">
+    <div id="warn" class="warn hide">Real market data is unavailable here, so prices are a simulated random walk that ticks every 10 seconds. Run the app with internet access to see real live prices.</div>
+
+    <div class="grid g3">
+      <div id="sig" class="card sig">
+        <h3>Live signal for next session</h3>
+        <div class="big" id="sigtxt"></div>
+        <div class="sub" id="sigsub"></div>
+        <div class="gauge"><i id="gfill"></i></div>
+        <div class="gl"><span>DOWN</span><span>UP</span></div>
+      </div>
+      <div class="card">
+        <h3>Live price</h3>
+        <div class="big" id="close"></div>
+        <div class="sub" id="chg"></div>
+      </div>
+      <div class="card">
+        <h3>Model accuracy (unseen data)</h3>
+        <div class="big blue" id="acc"></div>
+        <div class="sub" id="accsub"></div>
+      </div>
+    </div>
+
+    <div class="card mt">
+      <div class="ctop">
+        <h3>Live candlestick chart</h3>
+        <div id="ohlc" class="ohlc"></div>
+      </div>
+      <div class="tools">
+        <div class="grp" id="types"></div>
+        <div class="grp" id="tfs"></div>
+        <div class="grp">
+          <label>Refresh <b id="rfv">10s</b></label>
+          <input type="range" id="rf" min="0" max="3" step="1" value="1" oninput="setRefresh(this.value)">
+          <button class="mini" id="pz" onclick="togglePause()">Pause</button>
+        </div>
+      </div>
+      <div class="meter"><i id="mbar"></i></div>
+      <canvas id="cv"></canvas>
+      <div class="sub" id="cnote"></div>
+      <div class="sub" id="period"></div>
+    </div>
+
+    <div class="grid g2 mt">
+      <div class="card">
+        <h3>Backtest: model vs buy &amp; hold</h3>
+        <canvas id="bt"></canvas>
+        <div class="legend"><span><b style="background:var(--blue)"></b>Model strategy</span><span><b style="background:var(--green)"></b>Buy &amp; hold</span></div>
+      </div>
+      <div class="card">
+        <h3>Live signal log</h3>
+        <table id="log"></table>
+      </div>
+    </div>
+
+    <div class="grid g2 mt">
+      <div class="card">
+        <h3>Model comparison</h3>
+        <table id="mt"></table>
+        <div class="sub">Baseline (always guess the majority class): <b id="base"></b></div>
+        <div class="sub" id="tt"></div>
+      </div>
+      <div class="card">
+        <h3>Performance on test period</h3>
+        <table id="perf"></table>
+      </div>
+    </div>
+
+    <div class="card mt">
+      <h3>What drives the model (top features)</h3>
+      <div id="imp"></div>
+    </div>
+  </div>
+</main>
+<footer>Prices refresh every few seconds from Angel One SmartAPI when configured, otherwise from Yahoo Finance (can be delayed up to about 15 minutes for NSE). Educational project. Not financial advice. Daily market direction is close to random; judge the process, not the signal.</footer>
+
+<script>
+let last=null;
+let pms=10000,curT="",timer=null,tok=0,logs=[],prevPrice=null,userRefresh=null,paused=false,cType="candles",cInt="5m",cData=null,hover=-1;
+const $=id=>document.getElementById(id);
+const pct=(v,d=1)=>(v*100).toFixed(d)+"%";
+const cls=v=>v>=0?"up":"down";
+
+function line(canvas,series,colors,baseline){
+  const dpr=window.devicePixelRatio||1,w=canvas.clientWidth,h=canvas.clientHeight;
+  canvas.width=w*dpr;canvas.height=h*dpr;
+  const c=canvas.getContext("2d");c.scale(dpr,dpr);c.clearRect(0,0,w,h);
+  const all=series.flat(),lo=Math.min(...all),hi=Math.max(...all),pad=(hi-lo)*.08||1,
+        mn=lo-pad,mx=hi+pad,L=44,R=8,T=8,B=8;
+  const y=v=>T+(h-T-B)*(1-(v-mn)/(mx-mn));
+  c.strokeStyle="#1c232c";c.fillStyle="#8793a1";c.font="11px system-ui";c.lineWidth=1;
+  for(let i=0;i<=4;i++){const v=mn+(mx-mn)*i/4,yy=y(v);c.beginPath();c.moveTo(L,yy);c.lineTo(w-R,yy);c.stroke();c.fillText(v.toFixed(2),4,yy+4)}
+  if(baseline!==undefined){c.setLineDash([4,4]);c.strokeStyle="#3a4552";c.beginPath();c.moveTo(L,y(baseline));c.lineTo(w-R,y(baseline));c.stroke();c.setLineDash([])}
+  series.forEach((s,k)=>{
+    c.strokeStyle=colors[k];c.lineWidth=2;c.beginPath();
+    s.forEach((v,i)=>{const x=L+(w-L-R)*i/(s.length-1);i?c.lineTo(x,y(v)):c.moveTo(x,y(v))});c.stroke();
+  });
+}
+
+async function run(t){
+  t=(t||"^NSEI").trim();$("t").value=t;
+  $("out").classList.add("hide");$("error").classList.add("hide");$("loader").classList.remove("hide");
+  try{
+    const r=await fetch("/api/analyze?ticker="+encodeURIComponent(t));
+    const d=await r.json();
+    if(d.error)throw new Error(d.error);
+    last=d;render(d);startLive(t);
+  }catch(e){$("error").textContent=e.message;$("error").classList.remove("hide")}
+  $("loader").classList.add("hide");
+}
+
+function render(d){
+  $("out").classList.remove("hide");
+  $("warn").classList.toggle("hide",!d.synthetic);
+  const up=d.signal==="UP",conf=up?d.p_up:1-d.p_up;
+  $("sig").className="card sig "+(up?"up":"down");
+  $("sigtxt").className="big "+(up?"up":"down");
+  $("sigtxt").textContent=(up?"▲ ":"▼ ")+d.signal;
+  $("sigsub").textContent=`${pct(conf)} confidence · ${d.ticker} · as of ${d.as_of}`;
+  $("gfill").style.width=pct(d.p_up,0);
+  $("close").textContent=d.last_close.toLocaleString("en-IN",{maximumFractionDigits:2});
+  $("chg").className="sub "+cls(d.day_change);
+  $("chg").textContent=(d.day_change>=0?"+":"")+pct(d.day_change,2)+" last session";
+  const b=d.models.find(m=>m.model===d.best_model);
+  $("acc").textContent=pct(b.acc);
+  $("accsub").textContent=`${d.best_model} · baseline ${pct(d.baseline)}`;
+  $("base").textContent=pct(d.baseline);
+  $("tt").textContent=`Trained ${d.train_period[0]} to ${d.train_period[1]} · tested ${d.test_period[0]} to ${d.test_period[1]}`;
+
+  $("mt").innerHTML="<tr><th>Model</th><th>CV acc</th><th>Test acc</th><th>AUC</th></tr>"+
+    d.models.map(m=>`<tr class="${m.model===d.best_model?"best":""}"><td>${m.model}</td><td>${pct(m.cv_acc)}</td><td>${pct(m.acc)}</td><td>${m.auc.toFixed(3)}</td></tr>`).join("");
+
+  const row=(n,s)=>`<tr><td>${n}</td><td class="${cls(s.cagr)}">${pct(s.cagr)}</td><td class="${cls(s.sharpe)}">${s.sharpe.toFixed(2)}</td><td class="down">${pct(s.max_dd)}</td></tr>`;
+  $("perf").innerHTML="<tr><th></th><th>CAGR</th><th>Sharpe</th><th>Max DD</th></tr>"+row("Model strategy",d.strategy)+row("Buy &amp; hold",d.buy_hold);
+
+  const mx=Math.max(...d.importance.map(i=>i.value));
+  $("imp").innerHTML=d.importance.map(i=>`<div class="bar"><span>${i.name}</span><div class="t"><i style="width:${i.value/mx*100}%"></i></div><span>${(i.value*100).toFixed(1)}%</span></div>`).join("");
+
+  requestAnimationFrame(drawBT);
+}
+function drawBT(){if(last)line($("bt"),[last.curve_strategy,last.curve_bh],["#3b82f6","#22c55e"],1)}
+function setBadge(text,c){$("live").className="live "+c;$("livetxt").textContent=text}
+
+function restartTimer(){
+  clearInterval(timer);
+  const my=tok;
+  timer=setInterval(()=>tick(curT,my),pms);
+  meter();
+}
+
+function meter(){
+  const b=$("mbar");
+  b.style.transition="none";b.style.width="0%";void b.offsetWidth;
+  b.style.transition=`width ${pms}ms linear`;b.style.width="100%";
+}
+
+function startLive(t){
+  clearInterval(timer);tok++;logs=[];prevPrice=null;cData=null;paused=false;$("pz").textContent="Pause";
+  setBadge("Connecting...","");
+  curT=t;if(userRefresh===null)pms=10000;
+  tick(t,tok);
+  restartTimer();
+}
+
+const RATES=[5,10,30,60];
+function setRefresh(v){
+  userRefresh=RATES[v];pms=userRefresh*1000;
+  $("rfv").textContent=userRefresh+"s";
+  if(!paused)restartTimer();
+}
+function togglePause(){
+  paused=!paused;
+  $("pz").textContent=paused?"Resume":"Pause";
+  if(paused){
+    clearInterval(timer);
+    const b=$("mbar");b.style.transition="none";
+    setBadge("Paused","off");
+  }else{
+    tick(curT,tok);restartTimer();
+  }
+}
+
+const TYPES=[
+  {id:"candles",name:"Candles",svg:'<path d="M7 3v3M7 16v4M17 5v3M17 18v3"/><rect x="5" y="6" width="4" height="10" fill="currentColor"/><rect x="15" y="8" width="4" height="10" fill="currentColor"/>'},
+  {id:"hollow",name:"Hollow",svg:'<path d="M7 3v3M7 16v4M17 5v3M17 18v3"/><rect x="5" y="6" width="4" height="10"/><rect x="15" y="8" width="4" height="10"/>'},
+  {id:"ha",name:"Heikin Ashi",svg:'<path d="M5 12v-1M5 19v1M12 7v-2M12 15v2M19 4v-2M19 11v2"/><rect x="3.5" y="12" width="3" height="7" fill="currentColor"/><rect x="10.5" y="7" width="3" height="8" fill="currentColor"/><rect x="17.5" y="4" width="3" height="7" fill="currentColor"/>'},
+  {id:"ohlc",name:"Bars",svg:'<path d="M8 3v18M8 8H5M8 16h3M17 5v16M17 9h-3M17 14h3"/>'},
+  {id:"line",name:"Line",svg:'<path d="M3 17l5-6 4 3 8-9"/>'},
+  {id:"area",name:"Area",svg:'<path d="M3 17l5-6 4 3 8-9v13H3z" fill="currentColor" fill-opacity=".25"/><path d="M3 17l5-6 4 3 8-9"/>'}
+];
+const TFS=[["1m","1m"],["5m","5m"],["15m","15m"],["1h","1H"],["1d","1D"]];
+
+function buildTools(){
+  $("types").innerHTML=TYPES.map(t=>`<button class="tb ${t.id===cType?"on":""}" title="${t.name}" onclick="setType('${t.id}')"><svg viewBox="0 0 24 24">${t.svg}</svg>${t.name}</button>`).join("");
+  $("tfs").innerHTML=TFS.map(f=>`<button class="tb tf ${f[0]===cInt?"on":""}" title="${f[1]} candles" onclick="setInt('${f[0]}')">${f[1]}</button>`).join("");
+}
+function setType(t){cType=t;buildTools();drawCandles()}
+function setInt(v){cInt=v;cData=null;hover=-1;buildTools();loadCandles()}
+
+async function loadCandles(){
+  const my=tok,iv=cInt;
+  try{
+    const r=await fetch(`/api/candles?ticker=${encodeURIComponent(curT)}&interval=${iv}`);
+    const d=await r.json();
+    if(my!==tok||iv!==cInt)return;
+    if(d.error)throw new Error(d.error);
+    cData=d;
+    drawCandles();
+    showReadout(hover>=0?hover:d.candles.length-1);
+    $("cnote").textContent=`${d.candles.length} candles · ${iv} · source: ${d.source}`;
+  }catch(e){if(my===tok)$("cnote").textContent=e.message}
+}
+
+function haCandles(c){
+  let po=0,pc=0;
+  return c.map((k,i)=>{
+    const cl=(k.o+k.h+k.l+k.c)/4,op=i?(po+pc)/2:(k.o+k.c)/2;
+    po=op;pc=cl;
+    return {...k,o:op,c:cl,h:Math.max(k.h,op,cl),l:Math.min(k.l,op,cl)};
+  });
+}
+
+function showReadout(i){
+  if(!cData||!cData.candles[i])return;
+  const k=cData.candles[i],c=k.c>=k.o?"up":"down",f=v=>v.toLocaleString("en-IN",{maximumFractionDigits:2});
+  $("ohlc").innerHTML=`${k.t} &nbsp; <span class="${c}">O ${f(k.o)} &nbsp; H ${f(k.h)} &nbsp; L ${f(k.l)} &nbsp; C ${f(k.c)}</span>`;
+}
+
+const GREEN="#22c55e",RED="#ef4444",BLUE="#3b82f6";
+function drawCandles(){
+  const cv=$("cv");
+  if(!cData||!cv)return;
+  const dpr=window.devicePixelRatio||1,w=cv.clientWidth,h=cv.clientHeight;
+  cv.width=w*dpr;cv.height=h*dpr;
+  const g=cv.getContext("2d");g.scale(dpr,dpr);g.clearRect(0,0,w,h);
+  let d=cData.candles;if(cType==="ha")d=haCandles(d);
+  const n=d.length;if(n<2)return;
+  const L=8,R=70,T=10,B=24;
+  const lo=Math.min(...d.map(k=>k.l)),hi=Math.max(...d.map(k=>k.h)),pad=(hi-lo)*.06||1,mn=lo-pad,mx=hi+pad;
+  const y=v=>T+(h-T-B)*(1-(v-mn)/(mx-mn)),step=(w-L-R)/n,x=i=>L+step*(i+.5),bw=Math.max(1,Math.min(14,step*.7));
+  g.font="11px system-ui";g.lineWidth=1;
+  for(let i=0;i<=5;i++){
+    const v=mn+(mx-mn)*i/5,yy=y(v);
+    g.strokeStyle="#1c232c";g.beginPath();g.moveTo(L,yy);g.lineTo(w-R,yy);g.stroke();
+    g.fillStyle="#8793a1";g.fillText(v.toFixed(2),w-R+6,yy+4);
+  }
+  g.fillStyle="#8793a1";g.textAlign="center";
+  for(let j=0;j<=5;j++){const i=Math.round(j*(n-1)/5);g.fillText(d[i].t,Math.min(Math.max(x(i),30),w-R-30),h-7)}
+  g.textAlign="left";
+
+  if(cType==="line"||cType==="area"){
+    g.beginPath();d.forEach((k,i)=>i?g.lineTo(x(i),y(k.c)):g.moveTo(x(i),y(k.c)));
+    if(cType==="area"){
+      const grad=g.createLinearGradient(0,T,0,h-B);grad.addColorStop(0,"rgba(59,130,246,.35)");grad.addColorStop(1,"rgba(59,130,246,0)");
+      g.save();g.lineTo(x(n-1),h-B);g.lineTo(x(0),h-B);g.closePath();g.fillStyle=grad;g.fill();g.restore();
+      g.beginPath();d.forEach((k,i)=>i?g.lineTo(x(i),y(k.c)):g.moveTo(x(i),y(k.c)));
+    }
+    g.strokeStyle=BLUE;g.lineWidth=2;g.stroke();
+  }else{
+    d.forEach((k,i)=>{
+      const up=k.c>=k.o,col=up?GREEN:RED,cx=x(i);
+      g.strokeStyle=col;g.fillStyle=col;g.lineWidth=1.5;
+      if(cType==="ohlc"){
+        g.beginPath();g.moveTo(cx,y(k.h));g.lineTo(cx,y(k.l));
+        g.moveTo(cx-bw/2,y(k.o));g.lineTo(cx,y(k.o));
+        g.moveTo(cx,y(k.c));g.lineTo(cx+bw/2,y(k.c));g.stroke();
+        return;
+      }
+      g.beginPath();g.moveTo(cx,y(k.h));g.lineTo(cx,y(k.l));g.stroke();
+      const top=y(Math.max(k.o,k.c)),bh=Math.max(1,Math.abs(y(k.o)-y(k.c)));
+      if(cType==="hollow"&&up){g.fillStyle="#0f1318";g.fillRect(cx-bw/2,top,bw,bh);g.strokeRect(cx-bw/2,top,bw,bh)}
+      else g.fillRect(cx-bw/2,top,bw,bh);
+    });
+  }
+
+  const last=d[n-1],ly=y(last.c),lc=last.c>=last.o?GREEN:RED;
+  g.setLineDash([4,4]);g.strokeStyle=lc;g.lineWidth=1;g.beginPath();g.moveTo(L,ly);g.lineTo(w-R,ly);g.stroke();g.setLineDash([]);
+  g.fillStyle=lc;g.fillRect(w-R+2,ly-9,R-4,18);
+  g.fillStyle="#07090c";g.font="bold 11px system-ui";g.fillText(last.c.toFixed(2),w-R+6,ly+4);
+
+  if(hover>=0&&hover<n){
+    const cx=x(hover);g.strokeStyle="#3a4552";g.lineWidth=1;g.setLineDash([3,3]);
+    g.beginPath();g.moveTo(cx,T);g.lineTo(cx,h-B);g.stroke();g.setLineDash([]);
+  }
+}
+
+function setupHover(){
+  const cv=$("cv");
+  cv.addEventListener("mousemove",e=>{
+    if(!cData)return;
+    const n=cData.candles.length,rect=cv.getBoundingClientRect(),step=(rect.width-78)/n;
+    hover=Math.max(0,Math.min(n-1,Math.floor((e.clientX-rect.left-8)/step)));
+    drawCandles();showReadout(hover);
+  });
+  cv.addEventListener("mouseleave",()=>{hover=-1;drawCandles();if(cData)showReadout(cData.candles.length-1)});
+}
+
+async function tick(t,my){
+  if(my===tok){meter();loadCandles()}
+  try{
+    const r=await fetch("/api/live?ticker="+encodeURIComponent(t));
+    const d=await r.json();
+    if(my!==tok)return;
+    if(d.error)throw new Error(d.error);
+    applyLive(d);
+  }catch(e){if(my===tok)setBadge("Reconnecting...","err")}
+}
+
+function applyLive(d){
+  const up=d.signal==="UP",conf=up?d.p_up:1-d.p_up;
+  $("sig").className="card sig "+(up?"up":"down");
+  $("sigtxt").className="big "+(up?"up":"down");
+  $("sigtxt").textContent=(up?"▲ ":"▼ ")+d.signal;
+  $("sigsub").textContent=`${pct(conf)} confidence · ${d.ticker} · live`;
+  $("gfill").style.width=pct(d.p_up,0);
+  const c=$("close");
+  c.textContent=d.price.toLocaleString("en-IN",{maximumFractionDigits:2});
+  if(prevPrice!==null&&d.price!==prevPrice){
+    c.classList.remove("fu","fd");void c.offsetWidth;
+    c.classList.add(d.price>prevPrice?"fu":"fd");
+    setTimeout(()=>c.classList.remove("fu","fd"),900);
+  }
+  prevPrice=d.price;
+  $("chg").className="sub "+cls(d.change);
+  $("chg").textContent=`${d.change>=0?"+":""}${pct(d.change,2)} vs previous close · updated ${d.updated}`;
+  if(userRefresh===null&&d.refresh*1000!==pms){pms=d.refresh*1000;restartTimer()}
+  if(d.synthetic)setBadge("SIMULATED LIVE FEED","sim");
+  else if(d.market_open)setBadge(`LIVE · ${d.source}`,"on");
+  else setBadge(`Market closed · ${d.source}`,"off");
+  $("period").textContent=d.synthetic||d.market_open?`Refreshes every ${d.refresh} seconds · source: ${d.source}`:"Market is closed, showing the last trading session";
+  const top=logs[0];
+  if(!top||top.price!==d.price||top.signal!==d.signal){
+    logs.unshift({time:d.updated,price:d.price,p:d.p_up,signal:d.signal});
+    logs=logs.slice(0,8);
+  }
+  $("log").innerHTML="<tr><th>Time</th><th>Price</th><th>P(up)</th><th>Signal</th></tr>"+
+    logs.map(l=>`<tr><td>${l.time}</td><td>${l.price.toLocaleString("en-IN",{maximumFractionDigits:2})}</td><td>${pct(l.p)}</td><td class="${l.signal==="UP"?"up":"down"}">${l.signal}</td></tr>`).join("");
+}
+
+window.addEventListener("resize",()=>{drawBT();drawCandles()});
+buildTools();setupHover();
+run("^NSEI");
+</script>
+</body>
+</html>
